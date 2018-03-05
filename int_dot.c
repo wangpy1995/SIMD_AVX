@@ -71,23 +71,27 @@ dot256(float *p, char *a, char *b0, char *b1, char *b2, char *b3, char *b4, char
         return sum;
     }*/
 
-int dot1(float *a, float *b) {
-    __m256 sum;
-    float res = 0.0;
+void dot128(float *p, char *a, char *b, char *c, char *d, char *e) {
+    __m128 sum;
     float *r = &sum;
-    _mm_prefetch((char *) &res, _MM_HINT_T0);
-    _mm_prefetch((char *) r, _MM_HINT_T0);
-    _mm_prefetch((char *) (r + 4), _MM_HINT_T0);
-    for (int i = 0; i < 512; i += 8) {
-        __m256 za = _mm256_load_ps(&a[i]);
-        __m256 zb = _mm256_load_ps(&b[i]);
-        sum = _mm256_dp_ps(za, zb, 0xfe);
-        res += r[0] + r[4];
+    for (int i = 0; i < 512; i += 4) {
+        __m128 za = _mm_cvtepi32_ps(_mm_cvtepi8_epi32(_mm_loadl_epi64((const __m128i *) (a + i))));
+        __m128 zb0 = _mm_cvtepi32_ps(_mm_cvtepi8_epi32(_mm_loadl_epi64((const __m128i *) (b + i))));
+        __m128 zb1 = _mm_cvtepi32_ps(_mm_cvtepi8_epi32(_mm_loadl_epi64((const __m128i *) (c + i))));
+        __m128 zb2 = _mm_cvtepi32_ps(_mm_cvtepi8_epi32(_mm_loadl_epi64((const __m128i *) (d + i))));
+        __m128 zb3 = _mm_cvtepi32_ps(_mm_cvtepi8_epi32(_mm_loadl_epi64((const __m128i *) (e + i))));
+        sum = _mm_dp_ps(za, zb0, 0xfe);
+        p[0] += r[0] + r[4];
+        sum = _mm_dp_ps(za, zb1, 0xfe);
+        p[1] += r[0] + r[4];
+        sum = _mm_dp_ps(za, zb2, 0xfe);
+        p[2] += r[0] + r[4];
+        sum = _mm_dp_ps(za, zb3, 0xfe);
+        p[3] += r[0] + r[4];
     }
-    return (int) res;
 }
 
-int dot2(char *a, char *b) {
+float dot2(char *a, char *b) {
     int sum = 0;
     for (int i = 0; i < 512; i++) {
         sum += a[i] * b[i];
@@ -114,8 +118,8 @@ int main(void) {
     char data[512] ALIGNTO(32);
     char data2[512] ALIGNTO(32);
 //    unsigned char mask[16]  ALIGNTO(16);
-    int sseSum = 0;
-    int sseSum2 = 0;
+    float sseSum = 0;
+    float sseSum2 = 0;
 
     /* Time tracking */
     clock_t t1, t2, t3;
@@ -138,11 +142,12 @@ int main(void) {
     }
     t1 = clock();
 
-    for (int i = 0; i < NUM_ITERS / 8; i++) {
-        float p[8] = {0.0};
-        dot256(p, tmp, tmp, tmp, tmp, tmp, tmp, tmp, tmp, tmp);
-        sseSum = (int) p[0];
-//        sseSum = dot1(tmp, tmp);
+    for (int i = 0; i < NUM_ITERS / 4; i++) {
+        /*float p[8] = {0.0};
+        dot256(p, tmp, tmp, tmp, tmp, tmp, tmp, tmp, tmp, tmp);*/
+        float p[4] = {0.0};
+        dot128(p, tmp, tmp, tmp, tmp, tmp);
+        sseSum = p[0];
     }
     t2 = clock();
     for (int i = 0; i < NUM_ITERS; i++) {
@@ -157,7 +162,7 @@ int main(void) {
 
 
     /* Print out results */
-    printf("Results:\nSSE:  Time: %f    Value: %d\nResults:\nSSE2:  Time: %f    Value: %d\n",
+    printf("Results:\nSSE:  Time: %f    Value: %f\nResults:\nSSE2:  Time: %f    Value: %f\n",
            sseTime, sseSum,
            sseTime2, sseSum2);
 
