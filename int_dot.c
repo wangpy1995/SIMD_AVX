@@ -2,12 +2,13 @@
 // Created by wangpengyu6 on 18-3-1.
 //
 
-#include <stdint.h>
+#include<stdint.h>
 #include <stdio.h>
 #include <bits/time.h>
 #include <time.h>
 #include <immintrin.h>
 #include <avxintrin.h>
+#include <mhash.h>
 
 /* Defines */
 #define ALIGNTO(n) __attribute__((aligned(n)))
@@ -71,6 +72,34 @@ dot256(float *p, char *a, char *b0, char *b1, char *b2, char *b3, char *b4, char
         return sum;
     }*/
 
+int dot256_epi16(char *a, char *b) {
+    bool same = true;
+    __m256i tmp_sim;
+    int64_t *sim = &tmp_sim;
+    //check
+    for (int i = 0; i < 512; i += 256) {
+        tmp_sim = _mm256_xor_si256(*(__m256i *) (a + i), *(__m256i *) (b + i));
+        if (sim[0] != 0 || sim[1] != 0) {
+            same = false;
+            break;
+        }
+    }
+
+    //calculate dot_product
+    if (same) {
+        return 0;
+    } else {
+        __m256i sum = {0};
+        int *p = (int *) &sum;
+        for (int i = 0; i < 512; i += 16) {
+            __m256i za = _mm256_cvtepi8_epi16(*(__m128i *) (a + i));
+            __m256i zb = _mm256_cvtepi8_epi16(*(__m128i *) (b + i));
+            sum = _mm256_add_epi32(sum, _mm256_madd_epi16(za, zb));
+        }
+        return p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + p[6] + p[7];
+    }
+}
+
 void dot128(float *p, char *a, char *b, char *c, char *d, char *e) {
     __m128 sum;
     float *r = &sum;
@@ -91,12 +120,23 @@ void dot128(float *p, char *a, char *b, char *c, char *d, char *e) {
     }
 }
 
-float dot2(char *a, char *b) {
-    int sum = 0;
+int dot2(char *a, char *b) {
+    bool same = true;
     for (int i = 0; i < 512; i++) {
-        sum += a[i] * b[i];
+        if (a[i] != b[i]) {
+            same = false;
+            break;
+        }
     }
-    return sum;
+    if (same) {
+        return 0;
+    } else {
+        int sum = 0;
+        for (int i = 0; i < 512; i++) {
+            sum += a[i] * b[i];
+        }
+        return sum;
+    }
 }
 
 /*float dot128(char *a,char *b){
@@ -118,8 +158,8 @@ int main(void) {
     char data[512] ALIGNTO(32);
     char data2[512] ALIGNTO(32);
 //    unsigned char mask[16]  ALIGNTO(16);
-    float sseSum = 0;
-    float sseSum2 = 0;
+    int sseSum = 0;
+    int sseSum2 = 0;
 
     /* Time tracking */
     clock_t t1, t2, t3;
@@ -131,6 +171,7 @@ int main(void) {
     for (int i = -127; i < 384; i++) {
         data[i + 127] = (char) (i % 128);
         data2[i + 127] = (char) (i % 128);
+//        data2[i + 127] = (char) 127;
     }
 
 
@@ -142,16 +183,16 @@ int main(void) {
     }
     t1 = clock();
 
-    for (int i = 0; i < NUM_ITERS / 4; i++) {
+    for (int i = 0; i < NUM_ITERS; i++) {
         /*float p[8] = {0.0};
         dot256(p, tmp, tmp, tmp, tmp, tmp, tmp, tmp, tmp, tmp);*/
-        float p[4] = {0.0};
-        dot128(p, tmp, tmp, tmp, tmp, tmp);
-        sseSum = p[0];
+//        float p[4] = {0.0};
+//        dot128(p, tmp, tmp, tmp, tmp, tmp);
+        sseSum = dot2(data2, data2);
     }
     t2 = clock();
     for (int i = 0; i < NUM_ITERS; i++) {
-        sseSum2 = dot2(data2, data2);
+        sseSum2 = dot256_epi16(data2, data2);
     }
     t3 = clock();
 
@@ -162,7 +203,7 @@ int main(void) {
 
 
     /* Print out results */
-    printf("Results:\nSSE:  Time: %f    Value: %f\nResults:\nSSE2:  Time: %f    Value: %f\n",
+    printf("Results:\nSSE:  Time: %f    Value: %d\nResults:\nSSE2:  Time: %f    Value: %d\n",
            sseTime, sseSum,
            sseTime2, sseSum2);
 
