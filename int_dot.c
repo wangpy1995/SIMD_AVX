@@ -12,6 +12,7 @@
 /* Defines */
 #define ALIGNTO(n) __attribute__((aligned(n)))
 #define NUM_ITERS  2560000
+#define LEN 512
 
 void
 dot256(float *p, char *a, char *b0, char *b1, char *b2, char *b3, char *b4, char *b5, char *b6, char *b7) {
@@ -57,19 +58,21 @@ dot256(float *p, char *a, char *b0, char *b1, char *b2, char *b3, char *b4, char
 //    return (int) (res[0] + res[1] + res[2] + res[3] + res[4] + res[5] + res[6] + res[7]);
 }
 
-/*int asm_dot(char *a, char *b, int count) {
-    int sum = 0;
-    for (int i = 0; i < count; i++) {
-        int x = a[i];
-        int y = b[i];
-        __asm{
-        movaps ymm0,[x];
-        movaps ymm1,[y];
-        mulps ymm0, ymm1;
-        }
-        }
-        return sum;
-    }*/
+int dot256_epi16(char *a, char *b) {
+    __m256i sum = {0};
+    int r = 0;
+    __m256i za, zb;
+    int *res = (int *) &sum;
+    for (int i = 0; i < LEN; i += 16) {
+        za = _mm256_cvtepi8_epi16(*(__m128i *) (a + i));
+        zb = _mm256_cvtepi8_epi16(*(__m128i *) (b + i));
+        sum = _mm256_add_epi32(sum, _mm256_madd_epi16(za, zb));
+    }
+    for (int i = 0; i < 8; i++) {
+        r += res[i];
+    }
+    return r;
+}
 
 int dot1(float *a, float *b) {
     __m256 sum;
@@ -146,7 +149,7 @@ int main(void) {
     }
     t2 = clock();
     for (int i = 0; i < NUM_ITERS; i++) {
-        sseSum2 = dot2(data2, data2);
+        sseSum2 = dot256_epi16(data2, data2);
     }
     t3 = clock();
 
