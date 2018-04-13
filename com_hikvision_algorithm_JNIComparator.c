@@ -2,7 +2,7 @@
 // Created by wangpengyu6 on 18-3-2.
 //
 
-#include "com_hikvision_algorithm_JNIComparator.h"
+#include "include/com_hikvision_algorithm_JNIComparator.h"
 #include <immintrin.h>
 #include <avxintrin.h>
 

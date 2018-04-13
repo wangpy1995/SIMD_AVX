@@ -1,5 +1,5 @@
 #include <memory.h>
-#include "jni_test_ArrayCopyTest.h"
+#include "include/jni_test_ArrayCopyTest.h"
 
 /*
  * Class:     jni_test_ArrayCopyTest
