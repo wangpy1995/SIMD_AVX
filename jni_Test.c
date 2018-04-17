@@ -8,10 +8,11 @@
 
 JNIEXPORT jint JNICALL Java_jni_JniDot_dotProduct
         (JNIEnv *env, jobject ignore, jobject src, jobject des) {
-    const char *a = (*env)->GetDirectBufferAddress(env, src);
-    const char *b = (*env)->GetDirectBufferAddress(env, des);
 
+    const char *a = (char *) (*env)->GetDirectBufferAddress(env, src);
+    const char *b = (char *) (*env)->GetDirectBufferAddress(env, des);
     __m256i sum = _mm256_setzero_si256();
+    int *r = (int *) &sum;
 
     init;
     sum256(a, b, 32 * 0, sum);
@@ -34,6 +35,5 @@ JNIEXPORT jint JNICALL Java_jni_JniDot_dotProduct
     sum256(a, b, 32 * 14, sum);
     sum256(a, b, 32 * 15, sum);
 
-    int *r = (int *) &sum;
     return r[0] + r[1] + r[2] + r[3] + r[4] + r[5] + r[6] + r[7];
 }
