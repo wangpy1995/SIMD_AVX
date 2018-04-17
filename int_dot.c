@@ -72,7 +72,7 @@ int main(void) {
 
     /* RUN TESTS */
 
-    int iters = rand() % NUM_ITERS;
+//    int iters = rand() % NUM_ITERS;
 
     t1 = clock();
 
