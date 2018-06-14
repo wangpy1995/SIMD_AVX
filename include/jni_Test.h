@@ -15,6 +15,14 @@ extern "C" {
 JNIEXPORT jint JNICALL Java_jni_JniDot_dotProduct
         (JNIEnv *, jobject, jobject, jobject);
 
+/*
+ * Class:     jni_JniDot
+ * Method:    batchDotProduct
+ * Signature: (Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;I)V
+ */
+JNIEXPORT void JNICALL Java_jni_JniDot_batchDotProduct
+        (JNIEnv *, jobject, jobject, jobject, jobject, jint);
+
 #ifdef __cplusplus
 }
 #endif

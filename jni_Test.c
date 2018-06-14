@@ -6,11 +6,7 @@
 #include <immintrin.h>
 #include <inline_avx_sum.h>
 
-JNIEXPORT jint JNICALL Java_jni_JniDot_dotProduct
-        (JNIEnv *env, jobject ignore, jobject src, jobject des) {
-
-    const char *a = (char *) (*env)->GetDirectBufferAddress(env, src);
-    const char *b = (char *) (*env)->GetDirectBufferAddress(env, des);
+static int dot(const char *a, const char *b) {
     __m256i sum = _mm256_setzero_si256();
     int *r = (int *) &sum;
 
@@ -37,3 +33,26 @@ JNIEXPORT jint JNICALL Java_jni_JniDot_dotProduct
 
     return r[0] + r[1] + r[2] + r[3] + r[4] + r[5] + r[6] + r[7];
 }
+
+JNIEXPORT jint JNICALL Java_jni_JniDot_dotProduct
+        (JNIEnv *env, jobject ignore, jobject src, jobject des) {
+
+    const char *a = (char *) (*env)->GetDirectBufferAddress(env, src);
+    const char *b = (char *) (*env)->GetDirectBufferAddress(env, des);
+    return dot(a, b);
+}
+
+JNIEXPORT void JNICALL Java_jni_JniDot_batchDotProduct
+        (JNIEnv *env, jobject ignore, jobject src, jobject des, jobject res, jint batch) {
+
+    int *r = (int *) (*env)->GetDirectBufferAddress(env, res);
+    const char *a = (char *) (*env)->GetDirectBufferAddress(env, src);
+    const char *b = (char *) (*env)->GetDirectBufferAddress(env, des);
+    int i;
+    for (i = 0; i < batch; ++i) {
+        r[i] = dot(a, b);
+        a += 512;
+    }
+    printf("%d\n",r[0]);
+}
+
